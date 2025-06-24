@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Creditums Central - Card ID & Transaction Tracker</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    body {font-family:sans-serif; background:#f0f0f0; padding:20px;}
+    .card {max-width:600px; margin:auto; background:white; padding:20px;
+      border-radius:10px; box-shadow:0 0 10px #aaa;}
+    input, button {width:100%; padding:10px; margin:10px 0; font-size:16px;}
+    .result {font-weight:bold; color:green; white-space:pre-wrap;}
+    .error {color:red;}
+    .user-list, .log {font-size:14px; margin-top:20px; background:#f9f9f9;
+      padding:10px; border-radius:5px;}
+    .log-item {margin-bottom:10px;}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>💳 Creditums Central Tracker</h2>
+    <input type="text" id="query"
+      placeholder="e.g., Aarav paying 100cr to Rohit OR JD-ABC123 paying 50cr to JD-XYZ789">
+    <button onclick="processMessage()">Submit</button>
+    <p id="output" class="result"></p>
+
+    <div class="user-list">
+      <h3>🔐 Members & Balances:</h3>
+      <ul id="userList"></ul>
+    </div>
+
+    <div class="log">
+      <h3>📝 Transaction Log:</h3>
+      <div id="logList"></div>
+    </div>
+  </div>
+
+  <script>
+    const users = {
+      "JD-H6W8-J2T5-K1X9": {name:"Ranjana", balance:1000},
+      "JD-Z4N1-L9C2-AGM3": {name:"Rohit", balance:1000},
+      "JD-A39K-F1D7-28Q2": {name:"Aarav", balance:1000},
+      "JD-B1F6-U9Z4-R5L0": {name:"Hariti", balance:1000},
+      "JD-X3M9-D7K2-V9S8": {name:"Amit", balance:1000},
+      "JD-26Y7-G0R3-J5N1": {name:"Samriddhi", balance:1000},
+      "JD-ABCD-1234-EF17": {name:"Ranibala", balance:1000}
+    };
+    const transactions = [];
+
+    function findCardByName(name) {
+      name = name.toLowerCase();
+      return Object.entries(users).find(([,u])=>u.name.toLowerCase()===name)?.[0]||null;
+    }
+
+    function processMessage() {
+      const input = document.getElementById("query").value.trim();
+      const output = document.getElementById("output");
+      const regex = /([\w\-]+)\s+paying\s+(\d+)cr\s+to\s+([\w\-]+)/i;
+      const m = input.match(regex);
+      if (!m) return outputError("Use format: Name/ID paying 100cr to Name/ID");
+
+      const [_, rawFrom, am, rawTo] = m;
+      const amount = parseInt(am);
+      const from = users[rawFrom] ? rawFrom : findCardByName(rawFrom);
+      const to = users[rawTo] ? rawTo : findCardByName(rawTo);
+      if (!from || !to) return outputError("Name or ID not found");
+
+      if (users[from].balance < amount) return outputError(`${users[from].name} has insufficient balance`);
+
+      users[from].balance -= amount;
+      users[to].balance += amount;
+      const time = new Date().toLocaleString();
+      transactions.push({time, from, to, amount});
+      updateUserList();
+      updateLog();
+
+      output.className = "result";
+      output.textContent = `✅ ${users[from].name} paid ${amount}cr to ${users[to].name}.\n${users[from].name}: ${users[from].balance}cr, ${users[to].name}: ${users[to].balance}cr`;
+    }
+
+    function outputError(msg) {
+      const out = document.getElementById("output");
+      out.className = "error";
+      out.textContent = "❌ " + msg;
+    }
+
+    function updateUserList() {
+      const ul = document.getElementById("userList");
+      ul.innerHTML = "";
+      for (let [id, u] of Object.entries(users)) {
+        const li = document.createElement("li");
+        li.textContent = `${u.name} (${id}) → ${u.balance}cr`;
+        ul.appendChild(li);
+      }
+    }
+
+    function updateLog() {
+      const div = document.getElementById("logList");
+      div.innerHTML = "";
+      transactions.slice().reverse().forEach(tx => {
+        const el = document.createElement("div");
+        el.className = "log-item";
+        el.textContent = `[${tx.time}] ${users[tx.from].name} → ${users[tx.to].name}: ${tx.amount}cr`;
+        div.appendChild(el);
+      });
+    }
+
+    updateUserList();
+  </script>
+</body>
+</html>
